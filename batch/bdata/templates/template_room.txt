@@ -1,0 +1,47 @@
+-- %%ROOM_NAME%% script.
+scene = {
+    name = "%%ROOM_NAME%%",
+    version = "1.0.0",
+    mode = "R25D",
+    quit = false,
+    setup = function(scene, camera)
+		
+%%SETUP_CODE%%
+		
+		-- BEGIN HERE USER CODE
+%%SETUP_USER_CODE%%		
+		-- END HERE USER CODE
+        
+    end,
+    input = function(key)
+	
+%%INPUT_CODE%%
+		
+		-- BEGIN HERE USER CODE
+%%INPUT_USER_CODE%%			
+		-- END HERE USER CODE
+        
+    end,
+    update = function(scene, camera)
+	
+%%UPDATE_CODE%%
+	
+		-- BEGIN HERE USER CODE
+%%UPDATE_USER_CODE%%			
+		-- END HERE USER CODE
+		
+    end,
+    cleanup = function()
+	
+%%CLEANUP_CODE%%
+	
+		-- BEGIN HERE USER CODE
+%%CLEANUP_USER_CODE%%			
+		-- END HERE USER CODE
+        
+    end
+}
+
+-- BEGIN HERE USER CODE
+%%FUNCTIONS_USER_CODE%%			
+-- END HERE USER CODE

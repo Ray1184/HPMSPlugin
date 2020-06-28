@@ -1,0 +1,13 @@
+-- Config script.
+config = {
+    images_buffer = {
+%%IMAGES_BUFFER%%        
+    },
+
+    models_buffer = {
+%%MODELS_BUFFER%%       
+    },
+
+    first_script = "%%FIRST_SCRIPT%%"
+}
+
