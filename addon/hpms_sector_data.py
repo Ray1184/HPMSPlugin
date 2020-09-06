@@ -1,10 +1,10 @@
 import bpy
 
 
-class HPMSDataPanel(bpy.types.Panel):
+class HPMSSectorDataPanel(bpy.types.Panel):
     """Creates a HPMS Sector Data utils panel in the Object properties window"""
     bl_label = "HPMS Sector Data"
-    bl_idname = "object.hpmsdata"
+    bl_idname = "object.hpmssectordata"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "object"
@@ -21,25 +21,25 @@ class HPMSDataPanel(bpy.types.Panel):
             layout.label(text="To define an HPMS sector group, object name must starts with 'SG_'")
 
     def draw_data(self, context):
+
         obj = context.object
         layout = self.layout
         row = layout.row()
         row.label(text="Sector Group: " + obj.name)
-        layout.separator()
-        row = layout.row()
-        row.label(text="Linked Camera")
-        row = layout.row()
-        current_room = context.scene.hpms_shared.get_room_by_sector(obj.name)
-        current_cam = context.scene.hpms_shared.get_cam_by_sector_and_room(current_room, obj.name)
-        row.operator_menu_enum("object.hpmscam", "linked_camera_list", text=current_cam)
 
         layout.separator()
 
         row = layout.row()
         row.label(text="Related to Room")
         row = layout.row()
-        current_room = context.scene.hpms_shared.get_room_by_sector(obj.name)
-        row.operator_menu_enum("object.hpmsroom", "linked_room_list", text=current_room)
+        row.operator_menu_enum("object.hpmsroom", "linked_room_list", text=context.object.hpms_current_room)
+
+        layout.separator()
+
+        row = layout.row()
+        row.label(text="Linked Camera")
+        row = layout.row()
+        row.operator_menu_enum("object.hpmscam", "linked_camera_list", text=context.object.hpms_current_cam)
 
         layout.separator()
 
@@ -77,8 +77,7 @@ class HPMSCameraDropdownOperator(bpy.types.Operator):
         return context.mode == 'OBJECT'
 
     def execute(self, context):
-        current_room = context.scene.hpms_shared.get_room_by_sector(context.object.name)
-        context.scene.hpms_shared.put_cam(current_room, context.object.name, str(self.linked_camera_list))
+        context.object.hpms_current_cam = str(self.linked_camera_list)
         return {'FINISHED'}
 
 
@@ -101,12 +100,12 @@ class HPMSRoomDropdownOperator(bpy.types.Operator):
         return context.mode == 'OBJECT'
 
     def execute(self, context):
-        context.scene.hpms_shared.put_room(context.object.name, str(self.linked_room_list))
+        context.object.hpms_current_room = self.linked_room_list
         return {'FINISHED'}
 
 
-class HPMSListItem(bpy.types.PropertyGroup):
-    """Group of properties representing an item in the list."""
+class HPMSRoomListItem(bpy.types.PropertyGroup):
+    """Group of properties representing a room item in the list."""
     name: bpy.props.StringProperty(
         name="Room Name",
         description="Assigned room")
@@ -149,3 +148,36 @@ class HPMSRoomListRemove(bpy.types.Operator):
         room_list.remove(index)
         context.scene.list_index = min(max(0, index - 1), len(room_list) - 1)
         return {'FINISHED'}
+
+
+classes = (
+    HPMSRoomListItem,
+    HPMSRoomListAdd,
+    HPMSRoomListRemove,
+    HPMSRoomList,
+    HPMSRoomDropdownOperator,
+    HPMSCameraDropdownOperator,
+    HPMSSectorDataPanel
+)
+
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+    bpy.types.Scene.hpms_room_list = bpy.props.CollectionProperty(type=HPMSRoomListItem)
+    bpy.types.Scene.list_index = bpy.props.IntProperty(name="Index for HPMSRoomListItem", default=0)
+    bpy.types.Object.hpms_current_room = bpy.props.StringProperty(name="Current room for selected sector",
+                                                                  default="None")
+    bpy.types.Object.hpms_current_cam = bpy.props.StringProperty(name="Current camera for selected sector",
+                                                                 default="None")
+
+
+def unregister():
+    del bpy.types.Object.hpms_current_cam
+    del bpy.types.Object.hpms_current_room
+    del bpy.types.Scene.list_index
+    del bpy.types.Scene.hpms_room_list
+
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)

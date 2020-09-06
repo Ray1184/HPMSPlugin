@@ -15,10 +15,10 @@ class HPMSEntityDataPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        if context.object.name.startswith("EM_"):
+        if context.object.name.startswith("EY_"):
             self.draw_data(context)
         else:
-            layout.label(text="To define an HPMS entity marker, object name must starts with 'EM_'")
+            layout.label(text="To define an HPMS entity, object name must starts with 'EY_'")
 
     def draw_data(self, context):
 
@@ -30,15 +30,38 @@ class HPMSEntityDataPanel(bpy.types.Panel):
         layout.separator()
 
         row = layout.row()
-        row.label(text="Entity Settings")
+        row.label(text="Related to Room")
         row = layout.row()
-        row.prop(context.scene.hpms_entity_scene_prop.player, expand=True)
+        row.operator_menu_enum("object.hpmsroom", "linked_room_list", text=context.object.hpms_current_room)
+
+        layout.separator()
+
         row = layout.row()
-        row.prop(context.object.hpms_entity_obj_prop.color, expand=True)
+        row.label(text="Behavior data")
         row = layout.row()
-        row.prop(context.object.hpms_entity_obj_prop.depth, expand=True)
+        row.prop(context.object.hpms_entity_obj_prop, "player")
+
         row = layout.row()
-        row.prop(context.object.hpms_entity_obj_prop.animated, expand=True)
+        row.prop(context.object.hpms_entity_obj_prop, "collides")
+        row.prop(context.object.hpms_entity_obj_prop, "collisor")
+
+        if not context.object.hpms_entity_obj_prop.player:
+            row = layout.row()
+            row.prop(context.object.hpms_entity_obj_prop, "pushable")
+            row.prop(context.object.hpms_entity_obj_prop, "searchable")
+
+            row = layout.row()
+            row.prop(context.object.hpms_entity_obj_prop, "collectible")
+
+        layout.separator()
+
+        row = layout.row()
+        row.label(text="Graphics settings")
+        row = layout.row()
+        row.prop(context.object.hpms_entity_obj_prop, "color", text="Write Color")
+        row.prop(context.object.hpms_entity_obj_prop, "depth", text="Write Depth")
+        row = layout.row()
+        row.prop(context.object.hpms_entity_obj_prop, "animated", text="Animated")
 
         if context.object.hpms_entity_obj_prop.animated:
             self.draw_animation_config(context, layout)
@@ -55,6 +78,7 @@ class HPMSEntityDataPanel(bpy.types.Panel):
             item = context.object.hpms_anim_config_list[context.object.list_index]
             row = layout.row()
             row.prop(item, "name")
+            row = layout.row()
             row.prop(item, "start")
             row.prop(item, "end")
         row = layout.row()
@@ -62,15 +86,39 @@ class HPMSEntityDataPanel(bpy.types.Panel):
         row.operator("hpms_anim_config_list.remove", text="Remove")
 
 
-class HPMSEntitySceneProperties(bpy.types.PropertyGroup):
-    """Group of properties representing an entity configuration (scene dependent)."""
-    player: bpy.props.BoolProperty(
-        name="Player Entity",
-        description="Toggle for mark this entity as main player")
+def update_player(self, context):
+    for obj in bpy.data.objects:
+        if obj.name.startswith("EY_") and obj.hpms_entity_obj_prop.player and obj.name != context.object.name:
+            obj.hpms_entity_obj_prop.player = False
 
 
 class HPMSEntityObjectProperties(bpy.types.PropertyGroup):
-    """Group of properties representing an entity configuration (object dependent)."""
+    """Group of properties representing an entity configuration."""
+    player: bpy.props.BoolProperty(
+        name="Player Entity",
+        description="Toggle for mark this entity as main player",
+        update=update_player)
+
+    collides: bpy.props.BoolProperty(
+        name="Collides",
+        description="Toggle for make entity dependent by walkable map")
+
+    collisor: bpy.props.BoolProperty(
+        name="Collisor",
+        description="Toggle for generate bounding box")
+
+    pushable: bpy.props.BoolProperty(
+        name="Pushable",
+        description="Toggle for make entity pushable")
+
+    collectible: bpy.props.BoolProperty(
+        name="Collectible",
+        description="Toggle if entity can be picked as inventory object")
+
+    searchable: bpy.props.BoolProperty(
+        name="Searchable",
+        description="Toggle if player can search into entity")
+
     color: bpy.props.BoolProperty(
         name="Write Color",
         description="Toggle for render entity on screen")
@@ -81,11 +129,19 @@ class HPMSEntityObjectProperties(bpy.types.PropertyGroup):
 
     animated: bpy.props.BoolProperty(
         name="Enable Animation",
-        description="")
+        description="Enable animation for this entity")
+
+    animation_loop: bpy.props.BoolProperty(
+        name="Set Loop",
+        description="Enable animation loop")
+
+    animation_play: bpy.props.BoolProperty(
+        name="Play on start",
+        description="Play animation by default")
 
 
 class HPMSEntityAnimationConfigItem(bpy.types.PropertyGroup):
-    """Group of properties representing an animation configuration."""
+    """Group of properties representing an animation frame configuration."""
     name: bpy.props.StringProperty(
         name="Animation Name",
         description="Animation name to play")
@@ -104,11 +160,11 @@ class HPMSEntityAnimationConfigList(bpy.types.UIList):
         custom_icon = 'BONE_DATA'
 
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            layout.label(text=item.name, icon=custom_icon)
+            layout.label(text=item.name + " [" + str(item.start) + " - " + str(item.end) + "]", icon=custom_icon)
 
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
-            layout.label(text=item.name, icon=custom_icon)
+            layout.label(text=item.name + " [" + str(item.start) + " - " + str(item.end) + "]", icon=custom_icon)
 
 
 class HPMSEntityAnimationConfigListAdd(bpy.types.Operator):
@@ -117,7 +173,7 @@ class HPMSEntityAnimationConfigListAdd(bpy.types.Operator):
     bl_label = "Add a new animation config"
 
     def execute(self, context):
-        context.scene.hpms_room_list.add()
+        context.object.hpms_anim_config_list.add()
         return {'FINISHED'}
 
 
@@ -143,7 +199,6 @@ classes = (
     HPMSEntityAnimationConfigListRemove,
     HPMSEntityAnimationConfigItem,
     HPMSEntityAnimationConfigList,
-    HPMSEntitySceneProperties,
     HPMSEntityObjectProperties,
     HPMSEntityDataPanel
 )
@@ -154,13 +209,14 @@ def register():
         bpy.utils.register_class(cls)
 
     bpy.types.Object.hpms_anim_config_list = bpy.props.CollectionProperty(type=HPMSEntityAnimationConfigItem)
-    bpy.types.Scene.hpms_entity_scene_prop = bpy.props.PointerProperty(type=HPMSEntitySceneProperties)
+    bpy.types.Object.list_index = bpy.props.IntProperty(name="Index for HPMSEntityAnimationConfigItem", default=0)
     bpy.types.Object.hpms_entity_obj_prop = bpy.props.PointerProperty(type=HPMSEntityObjectProperties)
 
 
 def unregister():
     del bpy.types.Object.hpms_entity_obj_prop
-    del bpy.types.Scene.hpms_entity_scene_prop
+    del bpy.types.Object.list_index
     del bpy.types.Object.hpms_anim_config_list
+
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

@@ -1,3 +1,11 @@
 /venv/
 /dist/
 /.tmp.drivedownload/
+.idea
+batch/HPMS_Project
+*.log
+batch/HPMS_Project_20200716171957.zip
+batch/HPMS_Project_20200716172133.zip
+batch/HPMS_Project_20200825175653.zip
+batch/HPMS_Project_20200825180452.zip
+batch/HPMS_Project_20200825180602.zip

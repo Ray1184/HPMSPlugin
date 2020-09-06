@@ -6,8 +6,20 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import hpms_utils
 
 
+def backup(output_path):
+    import os
+    if not os.path.isdir(output_path):
+        return
+    from datetime import datetime
+    today = str(datetime.today().strftime('%Y%m%d%H%M%S'))
+    bak_scripts_path = output_path + "_" + today
+    shutil.make_archive(bak_scripts_path, 'zip', output_path)
+    import hpms_utils
+    hpms_utils.debug("Last project build backup done")
+
+
 def unzip_templates(output_path):
-    shutil.unpack_archive(hpms_utils.get_current_dir() + "/templates/data", output_path, 'zip')
+    shutil.unpack_archive(hpms_utils.get_current_dir() + "/templates/data.zip", output_path, 'zip')
 
 
 def create_empty_project(output_path):
@@ -38,7 +50,6 @@ def main():
         print("\n---------------------------------------------")
         print("----------------- ABORTED -------------------")
         print("---------------------------------------------\n\n\n")
-
 
 
 def start():
@@ -88,6 +99,11 @@ def start():
         help="Force update for all rooms.",
     )
 
+    parser.add_argument(
+        "-p", "--preview", dest="preview",
+        help="Improve rendering speed with only 16 samples.",
+    )
+
     args = parser.parse_args(argv)
 
     if not argv:
@@ -101,20 +117,23 @@ def start():
         parser.print_help()
         return
 
+    if not os.path.isdir(args.output_path):
+        create_empty_project(args.output_path)
+    else:
+        backup(args.output_path)
+
     if args.cleanup is not None and args.cleanup.lower() in ["t", "true", "y", "yes"]:
         hpms_utils.debug("Re-building project.")
         create_empty_project(args.output_path)
 
-    if not os.path.isdir(args.output_path):
-        create_empty_project(args.output_path)
-
     update_all = args.roomupdate_all is not None and args.roomupdate_all.lower() in ["t", "true", "y", "yes"]
     do_render = args.render is not None and args.render.lower() in ["t", "true", "y", "yes"]
+    preview = args.preview is not None and args.preview.lower() in ["t", "true", "y", "yes"]
     room_list = []
     if args.roomupdate_list is not None:
         room_list = args.roomupdate_list.split(",")
     import hpms_exporter
-    hpms_exporter.export_room_data(args.output_path, room_list, update_all, do_render)
+    hpms_exporter.export_room_data(args.output_path, room_list, update_all, do_render, preview)
 
 
 if __name__ == "__main__":

@@ -1,30 +1,36 @@
-import shutil
-
 import bpy
 
 
-def backup(output_path, folder):
-    scripts_path = output_path + "/data/" + folder
-    bak_scripts_path = output_path + "/data/" + folder + "_bak"
-
-    shutil.make_archive(bak_scripts_path, 'zip', scripts_path)
-
-
-def filter_sectors(room_name):
-    sectors = [sec for sec in bpy.data.objects if room_name == sec.hpms_current_room]
-    return sectors
-
-
-def export_room_data(output_path, room_list, update_all, do_render):
+def export_room_data(output_path, room_list, update_all, do_render, preview):
+    import hpms_utils
     scripts_path = output_path + "/data/scripts"
     maps_path = output_path + "/data/maps"
-    backup(output_path, "scripts")
-    backup(output_path, "maps")
+    screens_path = output_path + "/data/screens"
+    depth_path = output_path + "/data/masks"
     rooms = bpy.context.scene.hpms_room_list
     import hpms_lua
     import hpms_maps
+    import hpms_render
+    for cam in bpy.data.cameras:
+        hpms_render.config_cam(cam)
+    if do_render:
+        hpms_render.configure_renderer(preview)
+        import os
+        if not os.path.isdir(hpms_utils.get_current_dir() + "/../syslogs"):
+            os.mkdir(hpms_utils.get_current_dir() + "/../syslogs")
+        open(hpms_utils.get_current_dir() + "/../syslogs/blender_render.log", "w+")
+        open(hpms_utils.get_current_dir() + "/../syslogs/blender_export.log", "w+")
+
     for room in rooms:
         room_name = str(room.name)
+        if room_name.rstrip() == "":
+            hpms_utils.warn("Found a room with no name, skipping to next")
+            continue
         hpms_lua.create_or_update_room_script(scripts_path, room_name, room_list, update_all)
-        sectors = filter_sectors(room_name)
+
+        import hpms_filters
+        sectors = hpms_filters.filter_sectors(room_name)
+
         hpms_maps.create_or_update_room_map(maps_path, room_name, sectors, room_list, update_all)
+        if do_render:
+            hpms_render.create_or_update_screens(screens_path, depth_path, room_name, room_list, update_all)
